@@ -128,7 +128,16 @@ if uploaded_file is not None:
         ax.set_ylabel("価格")
         ax.legend()
         ax.grid(True)
-
+        # ラベル・グリッド・色の調整
+        ax.set_title("売買とmNAVの推移", color='white')
+        ax.set_xlabel("日付", color='white')
+        ax.set_ylabel("価格", color='white')
+        ax.legend()
+        ax.grid(True, color='gray', linestyle='--', alpha=0.3)
+        
+        # 軸の文字色も白に
+        ax.tick_params(colors='white', which='both')
+        
         st.pyplot(fig)
 
     except Exception as e:
