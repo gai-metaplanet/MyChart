@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import yfinance as yf
 
 st.title("売買タイミング可視化ツール")
 
@@ -9,8 +10,10 @@ uploaded_file = st.file_uploader("CSVファイルをアップロードしてく�
 
 if uploaded_file is not None:
     try:
+        # アップロードされたCSV読み込み
         meta = pd.read_csv(uploaded_file)
 
+        # 初期整形
         meta_index = {
             'DateLabel': meta['日付'].tolist(),
             'EndV': meta['終値'].tolist(),
@@ -18,18 +21,50 @@ if uploaded_file is not None:
             '買い': meta['買い'].tolist(),
             'mNAV': meta['mNAV'].tolist(),
         }
-
         meta_df = pd.DataFrame(meta_index)
 
-        # ↓ 表形式で表示・編集可能に（ここを追加）
+        # ======= 🔽 株価データ補完処理 🔽 =======
+        ticker = yf.Ticker("3350.T")
+        df = ticker.history(period="1y")
+        df_close = df[['Close']].copy()
+        df_close.reset_index(inplace=True)
+        df_close['DateLabel'] = df_close['Date'].dt.strftime('%Y-%m-%d')
+
+        # CSVに存在しない日付を抽出し、空の行で追加
+        existing_dates = set(meta_df['DateLabel'])
+        new_dates_df = df_close[~df_close['DateLabel'].isin(existing_dates)]
+
+        for _, row in new_dates_df.iterrows():
+            new_row = {
+                'DateLabel': row['DateLabel'],
+                'EndV': row['Close'],
+                '売り': 0,
+                '買い': 0,
+                'mNAV': 0
+            }
+            meta_df = pd.concat([meta_df, pd.DataFrame([new_row])], ignore_index=True)
+
+        # Close列を一時的にマージして EndV を補完
+        meta_df = pd.merge(meta_df, df_close[['DateLabel', 'Close']], on='DateLabel', how='left')
+        meta_df['EndV'] = meta_df['Close'].combine_first(meta_df['EndV'])
+        meta_df.drop(columns=['Close'], inplace=True)
+
+        # ソートして並び替え
+        meta_df.sort_values('DateLabel', inplace=True)
+        meta_df.reset_index(drop=True, inplace=True)
+
+        # 欠損除去（基本整備）
+        meta_df = meta_df.dropna(subset=["DateLabel", "EndV", "売り", "買い", "mNAV"])
+
+        # ======= 🔽 表編集 & 保存 🔽 =======
         st.subheader("📋 表データの編集")
         edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
-        # 「保存」ボタンでCSVファイルとしてダウンロード（ここを追加）
+        # ダウンロードボタン
         csv = edited_df.to_csv(index=False).encode("utf-8")
         st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
 
-        # 以下はグラフ描画用に使う DataFrame として edited_df を使用
+        # ======= 🔽 グラフ描画 🔽 =======
         edited_df['売り'] = edited_df['売り'].astype(str).str.replace(',', '').astype(float)
         edited_df['買い'] = edited_df['買い'].astype(str).str.replace(',', '').astype(float)
         edited_df['mNAV'] = edited_df['mNAV'].fillna(0)
