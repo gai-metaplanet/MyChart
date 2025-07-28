@@ -55,7 +55,11 @@ if uploaded_file is not None:
 
         # 欠損除去（基本整備）
         # meta_df = meta_df.dropna(subset=["DateLabel", "EndV", "売り", "買い", "mNAV"])
-
+        meta_df['売り'] = meta_df['売り'].str.replace(',', '').astype(float)
+        meta_df['買い'] = meta_df['買い'].str.replace(',', '').astype(float)
+        meta_df['売り'] = meta_df['売り'].fillna(0)
+        meta_df['買い'] = meta_df['買い'].fillna(0)
+        
         # ======= 🔽 表編集 & 保存 🔽 =======
         st.subheader("📋 表データの編集")
         edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
