@@ -2,6 +2,15 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import matplotlib.dates as mdates
+
+# フォントパス
+font_path = "fonts/IPAexGothic.ttf"
+font_prop = fm.FontProperties(fname=font_path)
+plt.rcParams['font.family'] = font_prop.get_name()
+
 
 st.title("売買タイミング可視化ツール")
 
@@ -68,6 +77,8 @@ if uploaded_file is not None:
         csv = edited_df.to_csv(index=False).encode("utf-8")
         st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
 
+        edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
+
         # ======= 🔽 グラフ描画 🔽 =======
         edited_df['売り'] = edited_df['売り'].astype(str).str.replace(',', '').astype(float)
         edited_df['買い'] = edited_df['買い'].astype(str).str.replace(',', '').astype(float)
@@ -94,8 +105,11 @@ if uploaded_file is not None:
                 return 180
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='終値', color='blue', alpha=0.6)
-        ax.plot(edited_df['DateLabel'], edited_df['mNAV'], label='mNAV', color='orange', linestyle='--')
+        # 背景を黒に
+        fig.patch.set_facecolor('black')
+        ax.set_facecolor('black')
+        ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='終値', color='orange', alpha=0.6)
+        # ax.plot(edited_df['DateLabel'], edited_df['mNAV'], label='mNAV', color='orange', linestyle='--')
 
         for i in range(len(buy_dates)):
             ax.scatter(buy_dates[i], filtered_buy['EndV'].iloc[i], s=get_marker_size(buy_volumes[i]),
@@ -105,6 +119,10 @@ if uploaded_file is not None:
             ax.scatter(sell_dates[i], filtered_sell['EndV'].iloc[i], s=get_marker_size(sell_volumes[i]),
                        color='red', alpha=0.5, label='売り' if i == 0 else "")
 
+        # 日付の形式を整える（横軸）
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # ← 月ごと
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        fig.autofmt_xdate()
         ax.set_title("売買とmNAVの推移")
         ax.set_xlabel("日付")
         ax.set_ylabel("価格")
