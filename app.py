@@ -5,12 +5,16 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
+import os
 
 # フォントパス
-font_path = "fonts/IPAexGothic.ttf"
-font_prop = fm.FontProperties(fname=font_path)
-plt.rcParams['font.family'] = font_prop.get_name()
+font_path = os.path.join("fonts","IPAexGothic.ttf")
 
+if os.path.exists(font_path):
+    font_prop = fm.FontProperties(fname=font_path)
+    plt.rcParams['font.family'] = font_prop.get_name()
+else:
+    st.warning("フォントファイルが見つかりません。文字化けが発生する可能性があります。")
 
 st.title("売買タイミング可視化ツール")
 
