@@ -5,21 +5,11 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import matplotlib.dates as mdates
-import os
 
-# フォントパス
-font_path = os.path.join("fonts","IPAexGothic.ttf")
-
-if os.path.exists(font_path):
-    font_prop = fm.FontProperties(fname=font_path)
-    plt.rcParams['font.family'] = font_prop.get_name()
-else:
-    st.warning("フォントファイルが見つかりません。文字化けが発生する可能性があります。")
-
-st.title("売買タイミング可視化ツール")
+st.title("My 3350 Trade History")
 
 # ファイルアップロード
-uploaded_file = st.file_uploader("CSVファイルをアップロードしてください", type="csv")
+uploaded_file = st.file_uploader("CSVファイルをアップロードしてください Upload your CSV file", type="csv")
 
 if uploaded_file is not None:
     try:
@@ -74,12 +64,12 @@ if uploaded_file is not None:
         meta_df['買い'] = meta_df['買い'].fillna(0)
         
         # ======= 🔽 表編集 & 保存 🔽 =======
-        st.subheader("📋 表データの編集")
+        st.subheader("📋 表データの編集　Edit Data Table")
         edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
         # ダウンロードボタン
         csv = edited_df.to_csv(index=False).encode("utf-8")
-        st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
+        st.download_button("💾 編集後CSVをダウンロード　Download Edited CSV", data=csv, file_name="edited_data.csv", mime="text/csv")
 
         edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
 
@@ -112,30 +102,27 @@ if uploaded_file is not None:
         # 背景を黒に
         fig.patch.set_facecolor('black')
         ax.set_facecolor('black')
-        ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='終値', color='orange', alpha=0.6)
+        ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='End Value', color='orange', alpha=0.6)
         # ax.plot(edited_df['DateLabel'], edited_df['mNAV'], label='mNAV', color='orange', linestyle='--')
 
         for i in range(len(buy_dates)):
             ax.scatter(buy_dates[i], filtered_buy['EndV'].iloc[i], s=get_marker_size(buy_volumes[i]),
-                       color='green', alpha=0.5, label='買い' if i == 0 else "")
+                       color='green', alpha=0.5, label='Buy' if i == 0 else "")
 
         for i in range(len(sell_dates)):
             ax.scatter(sell_dates[i], filtered_sell['EndV'].iloc[i], s=get_marker_size(sell_volumes[i]),
-                       color='red', alpha=0.5, label='売り' if i == 0 else "")
+                       color='red', alpha=0.5, label='Sell' if i == 0 else "")
 
         # 日付の形式を整える（横軸）
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # ← 月ごと
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         fig.autofmt_xdate()
-        ax.set_title("売買とmNAVの推移")
-        ax.set_xlabel("日付")
-        ax.set_ylabel("価格")
         ax.legend()
         ax.grid(True)
         # ラベル・グリッド・色の調整
-        ax.set_title("売買とmNAVの推移", color='white')
-        ax.set_xlabel("日付", color='white')
-        ax.set_ylabel("価格", color='white')
+        ax.set_title("My 3350 Trade History", color='white')
+        ax.set_xlabel("Date", color='white')
+        ax.set_ylabel("Value", color='white')
         ax.legend()
         ax.grid(True, color='gray', linestyle='--', alpha=0.3)
         
