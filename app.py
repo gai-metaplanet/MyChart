@@ -54,7 +54,7 @@ if uploaded_file is not None:
         meta_df.reset_index(drop=True, inplace=True)
 
         # 欠損除去（基本整備）
-        meta_df = meta_df.dropna(subset=["DateLabel", "EndV", "売り", "買い", "mNAV"])
+        # meta_df = meta_df.dropna(subset=["DateLabel", "EndV", "売り", "買い", "mNAV"])
 
         # ======= 🔽 表編集 & 保存 🔽 =======
         st.subheader("📋 表データの編集")
