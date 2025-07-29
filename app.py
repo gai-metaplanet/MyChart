@@ -13,11 +13,11 @@ DEFAULT_CSV_PATH = "data/3350 - default.csv"
 def load_default_csv():
     try:
         df = pd.read_csv(DEFAULT_CSV_PATH)
-        df.rename(columns={'日付': 'DateLabel', '終値': 'EndV'}, inplace=True)
+        df.rename(columns={'Date': 'DateLabel', 'End Value': 'EndV'}, inplace=True)
         return df
     except Exception as e:
         st.error(f"デフォルトCSVの読み込みに失敗しました: {e}")
-        return pd.DataFrame(columns=['DateLabel', 'EndV', '売り', '買い'])
+        return pd.DataFrame(columns=['DateLabel', 'EndV', 'Sell', 'Buy'])
 
 # 🔹 株価をyfinanceから取得
 def fetch_stock_history():
@@ -37,9 +37,9 @@ stock_df = fetch_stock_history()
 existing_dates = set(meta_df['DateLabel'])
 new_dates_df = stock_df[~stock_df['DateLabel'].isin(existing_dates)].copy()
 
-new_dates_df['売り'] = 0
-new_dates_df['買い'] = 0
-new_dates_df['mNAV'] = 0
+new_dates_df['Sell'] = 0
+new_dates_df['Buy'] = 0
+# new_dates_df['mNAV'] = 0
 
 # 🔹 結合（古い＋新しい日付）
 meta_df = pd.concat([meta_df, new_dates_df], ignore_index=True)
@@ -48,9 +48,9 @@ meta_df = pd.concat([meta_df, new_dates_df], ignore_index=True)
 meta_df.sort_values('DateLabel', inplace=True)
 meta_df.reset_index(drop=True, inplace=True)
 
-meta_df['売り'] = meta_df['売り'].astype(str).str.replace(',', '').astype(float).fillna(0)
-meta_df['買い'] = meta_df['買い'].astype(str).str.replace(',', '').astype(float).fillna(0)
-meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
+meta_df['Sell'] = meta_df['Sell'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['Buy'] = meta_df['Buy'].astype(str).str.replace(',', '').astype(float).fillna(0)
+# meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
 
 
 # 🔹 CSVアップロード対応（あれば上書き）
@@ -58,20 +58,20 @@ uploaded_file = st.file_uploader("📂 CSVファイルをアップロード（�
 if uploaded_file:
     try:
         uploaded_df = pd.read_csv(uploaded_file)
-        uploaded_df.rename(columns={'日付': 'DateLabel', '終値': 'EndV'}, inplace=True)
+        uploaded_df.rename(columns={'Date': 'DateLabel', 'End Value': 'EndV'}, inplace=True)
         uploaded_df['DateLabel'] = uploaded_df['DateLabel'].astype(str)
         # 日付で上書きマージ
         meta_df = pd.merge(meta_df, uploaded_df, on='DateLabel', how='left', suffixes=('', '_u'))
-        for col in ['EndV', '売り', '買い', 'mNAV']:
+        for col in ['EndV', 'Sell', 'Buy']:
             meta_df[col] = meta_df[f"{col}_u"].combine_first(meta_df[col])
             meta_df.drop(columns=[f"{col}_u"], inplace=True)
         st.success("✅ アップロードCSVを反映しました")
     except Exception as e:
         st.error(f"アップロードCSVの読み込み中にエラー: {e}")
 
-meta_df['売り'] = meta_df['売り'].astype(str).str.replace(',', '').astype(float).fillna(0)
-meta_df['買い'] = meta_df['買い'].astype(str).str.replace(',', '').astype(float).fillna(0)
-meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
+meta_df['Sell'] = meta_df['Sell'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['Buy'] = meta_df['Buy'].astype(str).str.replace(',', '').astype(float).fillna(0)
+# meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
 
 
 # ===== 編集 & 保存 =====
@@ -88,7 +88,7 @@ st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name
 edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
 
 # 編集後データの型変換も必要
-for col in ['売り', '買い', 'mNAV']:
+for col in ['Sell', 'Buy']:
     edited_df[col] = (
         edited_df[col]
         .astype(str)
@@ -98,8 +98,8 @@ for col in ['売り', '買い', 'mNAV']:
     )
 
 
-filtered_buy = edited_df[edited_df['買い'] != 0]
-filtered_sell = edited_df[edited_df['売り'] != 0]
+filtered_buy = edited_df[edited_df['Buy'] != 0]
+filtered_sell = edited_df[edited_df['Sell'] != 0]
 
 # 🔧 マーカーサイズ関数（トグル対応）
 def get_marker_size(volume):
@@ -128,12 +128,12 @@ ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='End Value', color='ora
 
 for i in range(len(filtered_buy)):
     ax.scatter(filtered_buy['DateLabel'].iloc[i], filtered_buy['EndV'].iloc[i],
-               s=get_marker_size(filtered_buy['買い'].iloc[i]), color='lightgreen',
+               s=get_marker_size(filtered_buy['Buy'].iloc[i]), color='lightgreen',
                marker='^', alpha=1, label='Buy' if i == 0 else "")
 
 for i in range(len(filtered_sell)):
     ax.scatter(filtered_sell['DateLabel'].iloc[i], filtered_sell['EndV'].iloc[i],
-               s=get_marker_size(filtered_sell['売り'].iloc[i]), color='red',
+               s=get_marker_size(filtered_sell['Sell'].iloc[i]), color='red',
                marker='v', alpha=1, label='Sell' if i == 0 else "")
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
