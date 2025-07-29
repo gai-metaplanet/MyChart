@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import yfinance
+import yfinance as yf
 import os
 
 st.title("My 3350 Trade History")
