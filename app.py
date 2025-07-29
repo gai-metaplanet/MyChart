@@ -104,7 +104,7 @@ filtered_sell = edited_df[edited_df['Sell'] != 0]
 # 🔧 マーカーサイズ関数（トグル対応）
 def get_marker_size(volume):
     if fixed_marker_size:
-        return 100  # 固定サイズ
+        return 50  # 固定サイズ
     try:
         volume = float(volume)
     except:
