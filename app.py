@@ -76,6 +76,9 @@ if uploaded_file:
 st.subheader("📋 表データの編集 / Edit Data Table")
 edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
+# 🔘 マーカーサイズの固定切り替え
+fixed_marker_size = st.toggle("📏 マーカーサイズを固定する", value=False)
+
 csv = edited_df.to_csv(index=False).encode("utf-8")
 st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
 
@@ -89,11 +92,14 @@ for col in ['売り', '買い', 'mNAV']:
 filtered_buy = edited_df[edited_df['買い'] != 0]
 filtered_sell = edited_df[edited_df['売り'] != 0]
 
+# 🔧 マーカーサイズ関数（トグル対応）
 def get_marker_size(volume):
+    if fixed_marker_size:
+        return 100  # 固定サイズ
     try:
         volume = float(volume)
     except:
-        return 60  # デフォルトサイズ
+        return 60
     if volume < 1000:
         return 60
     elif volume < 2000:
@@ -102,6 +108,7 @@ def get_marker_size(volume):
         return 140
     else:
         return 180
+
 
 
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -113,12 +120,12 @@ ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='End Value', color='ora
 for i in range(len(filtered_buy)):
     ax.scatter(filtered_buy['DateLabel'].iloc[i], filtered_buy['EndV'].iloc[i],
                s=get_marker_size(filtered_buy['買い'].iloc[i]), color='green',
-               marker='^', alpha=0.8, label='Buy' if i == 0 else "")
+               marker='^', alpha=1, label='Buy' if i == 0 else "")
 
 for i in range(len(filtered_sell)):
     ax.scatter(filtered_sell['DateLabel'].iloc[i], filtered_sell['EndV'].iloc[i],
                s=get_marker_size(filtered_sell['売り'].iloc[i]), color='red',
-               marker='v', alpha=0.8, label='Sell' if i == 0 else "")
+               marker='v', alpha=1, label='Sell' if i == 0 else "")
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
