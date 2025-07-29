@@ -52,13 +52,6 @@ meta_df['売り'] = meta_df['売り'].astype(str).str.replace(',', '').astype(fl
 meta_df['買い'] = meta_df['買い'].astype(str).str.replace(',', '').astype(float).fillna(0)
 meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
 
-# 型補正
-for col in ['売り', '買い', 'mNAV']:
-    meta_df[col] = (
-        meta_df[col]
-        .fillna(0)                       # 欠損値を0に
-    )
-
 
 # 🔹 CSVアップロード対応（あれば上書き）
 uploaded_file = st.file_uploader("📂 CSVファイルをアップロード（任意）", type="csv")
@@ -75,6 +68,11 @@ if uploaded_file:
         st.success("✅ アップロードCSVを反映しました")
     except Exception as e:
         st.error(f"アップロードCSVの読み込み中にエラー: {e}")
+
+meta_df['売り'] = meta_df['売り'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['買い'] = meta_df['買い'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
+
 
 # ===== 編集 & 保存 =====
 st.subheader("📋 表データの編集 / Edit Data Table")
