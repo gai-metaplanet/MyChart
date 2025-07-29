@@ -48,6 +48,10 @@ meta_df = pd.concat([meta_df, new_dates_df], ignore_index=True)
 meta_df.sort_values('DateLabel', inplace=True)
 meta_df.reset_index(drop=True, inplace=True)
 
+meta_df['売り'] = meta_df['売り'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['買い'] = meta_df['買い'].astype(str).str.replace(',', '').astype(float).fillna(0)
+meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
+
 # 型補正
 for col in ['売り', '買い', 'mNAV']:
     meta_df[col] = pd.to_numeric(meta_df[col], errors='coerce').fillna(0)
