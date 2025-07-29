@@ -6,7 +6,7 @@ import os
 
 st.title("My 3350 Trade History")
 
-DEFAULT_CSV_PATH = "data/default.csv"
+DEFAULT_CSV_PATH = "data/3350 - default.csv"
 
 # デフォルトCSV読み込み関数
 def load_default_csv():
@@ -16,38 +16,61 @@ def load_default_csv():
         return df
     except Exception as e:
         st.error(f"デフォルトCSVの読み込みに失敗しました: {e}")
-        return pd.DataFrame(columns=['DateLabel', 'EndV', '売り', '買い', 'mNAV'])
+        return pd.DataFrame(columns=['DateLabel', 'EndV', '売り', '買い'])
 
-# アップロードファイル取得
-uploaded_file = st.file_uploader("📂 CSVファイルをアップロードしてください（任意）", type="csv")
+# 🔹 株価をyfinanceから取得
+def fetch_stock_history():
+    ticker = yf.Ticker("3350.T")
+    df = ticker.history(period="1y")
+    df.reset_index(inplace=True)
+    df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')
+    return df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
 
-# データ読み込み処理
-if uploaded_file is not None:
-    try:
-        user_df = pd.read_csv(uploaded_file)
-        user_df.rename(columns={'日付': 'DateLabel', '終値': 'EndV'}, inplace=True)
-        meta_df = user_df
-        st.success("✅ アップロードCSVを読み込みました")
-    except Exception as e:
-        st.error(f"CSV読み込み中にエラーが発生しました: {e}")
-        st.stop()
-else:
-    st.info("📈 デフォルトデータ（default.csv）を読み込んでいます")
-    meta_df = load_default_csv()
+# 🔹 デフォルト読み込み
+meta_df = load_default_csv()
 
-# データ整形
+# 🔹 yfinanceデータ取得
+stock_df = fetch_stock_history()
+
+# 🔹 defaultに存在しない日付を補完（EndVだけ埋める）
+existing_dates = set(meta_df['DateLabel'])
+new_dates_df = stock_df[~stock_df['DateLabel'].isin(existing_dates)].copy()
+
+new_dates_df['売り'] = 0
+new_dates_df['買い'] = 0
+new_dates_df['mNAV'] = 0
+
+# 🔹 結合（古い＋新しい日付）
+meta_df = pd.concat([meta_df, new_dates_df], ignore_index=True)
+
+# ソート・整形
 meta_df.sort_values('DateLabel', inplace=True)
 meta_df.reset_index(drop=True, inplace=True)
 
-# データ型変換（念のため）
+# 型補正
 for col in ['売り', '買い', 'mNAV']:
     meta_df[col] = pd.to_numeric(meta_df[col], errors='coerce').fillna(0)
 
-# ===== 表編集 & 保存 =====
+# 🔹 CSVアップロード対応（あれば上書き）
+uploaded_file = st.file_uploader("📂 CSVファイルをアップロード（任意）", type="csv")
+if uploaded_file:
+    try:
+        uploaded_df = pd.read_csv(uploaded_file)
+        uploaded_df.rename(columns={'日付': 'DateLabel', '終値': 'EndV'}, inplace=True)
+        uploaded_df['DateLabel'] = uploaded_df['DateLabel'].astype(str)
+        # 日付で上書きマージ
+        meta_df = pd.merge(meta_df, uploaded_df, on='DateLabel', how='left', suffixes=('', '_u'))
+        for col in ['EndV', '売り', '買い', 'mNAV']:
+            meta_df[col] = meta_df[f"{col}_u"].combine_first(meta_df[col])
+            meta_df.drop(columns=[f"{col}_u"], inplace=True)
+        st.success("✅ アップロードCSVを反映しました")
+    except Exception as e:
+        st.error(f"アップロードCSVの読み込み中にエラー: {e}")
+
+# ===== 編集 & 保存 =====
 st.subheader("📋 表データの編集 / Edit Data Table")
 edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
-# ダウンロードボタン
 csv = edited_df.to_csv(index=False).encode("utf-8")
 st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
 
