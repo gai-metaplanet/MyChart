@@ -54,7 +54,14 @@ meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
 
 # 型補正
 for col in ['売り', '買い', 'mNAV']:
-    meta_df[col] = pd.to_numeric(meta_df[col], errors='coerce').fillna(0)
+    meta_df[col] = (
+        meta_df[col]
+        .astype(str)                      # 文字列として扱う
+        .str.replace(',', '')            # カンマ削除
+        .astype(float)                   # 数値に変換
+        .fillna(0)                       # 欠損値を0に
+    )
+
 
 # 🔹 CSVアップロード対応（あれば上書き）
 uploaded_file = st.file_uploader("📂 CSVファイルをアップロード（任意）", type="csv")
@@ -87,7 +94,14 @@ edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
 
 # 編集後データの型変換も必要
 for col in ['売り', '買い', 'mNAV']:
-    edited_df[col] = pd.to_numeric(edited_df[col], errors='coerce').fillna(0)
+    edited_df[col] = (
+        edited_df[col]
+        .astype(str)
+        .str.replace(',', '')
+        .astype(float)
+        .fillna(0)
+    )
+
 
 filtered_buy = edited_df[edited_df['買い'] != 0]
 filtered_sell = edited_df[edited_df['売り'] != 0]
