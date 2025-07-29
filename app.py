@@ -55,10 +55,6 @@ meta_df['mNAV'] = meta_df['mNAV'].astype(float).fillna(0)
 # 型補正
 for col in ['売り', '買い', 'mNAV']:
     meta_df[col] = (
-        meta_df[col]
-        .astype(str)                      # 文字列として扱う
-        .str.replace(',', '')            # カンマ削除
-        .astype(float)                   # 数値に変換
         .fillna(0)                       # 欠損値を0に
     )
 
