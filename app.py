@@ -129,12 +129,12 @@ ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='End Value', color='ora
 for i in range(len(filtered_buy)):
     ax.scatter(filtered_buy['DateLabel'].iloc[i], filtered_buy['EndV'].iloc[i],
                s=get_marker_size(filtered_buy['Buy'].iloc[i]), color='lightgreen',
-               marker='^', alpha=1, label='Buy' if i == 0 else "")
+               marker='^', alpha=0.8, label='Buy' if i == 0 else "")
 
 for i in range(len(filtered_sell)):
     ax.scatter(filtered_sell['DateLabel'].iloc[i], filtered_sell['EndV'].iloc[i],
                s=get_marker_size(filtered_sell['Sell'].iloc[i]), color='red',
-               marker='v', alpha=1, label='Sell' if i == 0 else "")
+               marker='v', alpha=0.8, label='Sell' if i == 0 else "")
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
