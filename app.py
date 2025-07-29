@@ -5,7 +5,7 @@ import matplotlib.dates as mdates
 import yfinance as yf
 import os
 
-st.title("My 3350 Trade History")
+st.title("My METΔPLΔNET Trading History")
 
 DEFAULT_CSV_PATH = "data/3350 - default.csv"
 
@@ -110,13 +110,13 @@ def get_marker_size(volume):
     except:
         return 60
     if volume < 1000:
-        return 60
-    elif volume < 2000:
         return 100
-    elif volume < 10000:
+    elif volume < 2000:
         return 140
-    else:
+    elif volume < 10000:
         return 180
+    else:
+        return 220
 
 
 
@@ -128,7 +128,7 @@ ax.plot(edited_df['DateLabel'], edited_df['EndV'], label='End Value', color='ora
 
 for i in range(len(filtered_buy)):
     ax.scatter(filtered_buy['DateLabel'].iloc[i], filtered_buy['EndV'].iloc[i],
-               s=get_marker_size(filtered_buy['買い'].iloc[i]), color='green',
+               s=get_marker_size(filtered_buy['買い'].iloc[i]), color='lightgreen',
                marker='^', alpha=1, label='Buy' if i == 0 else "")
 
 for i in range(len(filtered_sell)):
