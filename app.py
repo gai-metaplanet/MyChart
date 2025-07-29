@@ -82,10 +82,18 @@ st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name
 # ===== グラフ描画 =====
 edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
 
+# 編集後データの型変換も必要
+for col in ['売り', '買い', 'mNAV']:
+    edited_df[col] = pd.to_numeric(edited_df[col], errors='coerce').fillna(0)
+
 filtered_buy = edited_df[edited_df['買い'] != 0]
 filtered_sell = edited_df[edited_df['売り'] != 0]
 
 def get_marker_size(volume):
+    try:
+        volume = float(volume)
+    except:
+        return 60  # デフォルトサイズ
     if volume < 1000:
         return 60
     elif volume < 2000:
@@ -94,6 +102,7 @@ def get_marker_size(volume):
         return 140
     else:
         return 180
+
 
 fig, ax = plt.subplots(figsize=(12, 6))
 fig.patch.set_facecolor('black')
