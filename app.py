@@ -54,7 +54,7 @@ meta_df['Buy'] = meta_df['Buy'].astype(str).str.replace(',', '').astype(float).f
 
 
 # 🔹 CSVアップロード対応（あれば上書き）
-uploaded_file = st.file_uploader("📂 CSVファイルをアップロード（任意）", type="csv")
+uploaded_file = st.file_uploader("📂 Upload CSV File（任意 / Optional）", type="csv")
 if uploaded_file:
     try:
         uploaded_df = pd.read_csv(uploaded_file)
@@ -65,7 +65,7 @@ if uploaded_file:
         for col in ['EndV', 'Sell', 'Buy']:
             meta_df[col] = meta_df[f"{col}_u"].combine_first(meta_df[col])
             meta_df.drop(columns=[f"{col}_u"], inplace=True)
-        st.success("✅ アップロードCSVを反映しました")
+        st.success("✅ アップロードCSVを反映しました / The upload has been applied")
     except Exception as e:
         st.error(f"アップロードCSVの読み込み中にエラー: {e}")
 
@@ -79,10 +79,10 @@ st.subheader("📋 表データの編集 / Edit Data Table")
 edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
 # 🔘 マーカーサイズの固定切り替え
-fixed_marker_size = st.toggle("📏 マーカーサイズを固定する", value=False)
+fixed_marker_size = st.toggle("📏 マーカーサイズを固定する / Fix the marker size", value=False)
 
 csv = edited_df.to_csv(index=False).encode("utf-8")
-st.download_button("💾 編集後CSVをダウンロード", data=csv, file_name="edited_data.csv", mime="text/csv")
+st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV", data=csv, file_name="Metaplanet_Trading_data.csv", mime="text/csv")
 
 # ===== グラフ描画 =====
 edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
@@ -140,7 +140,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 fig.autofmt_xdate()
 
-ax.set_title("My 3350 Trade History", color='white')
+ax.set_title("My METΔPLΔNET Trading History", color='white')
 ax.set_xlabel("Date", color='white')
 ax.set_ylabel("Value", color='white')
 ax.legend()
