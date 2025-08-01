@@ -65,7 +65,7 @@ if uploaded_file:
         for col in ['EndV', 'Sell', 'Buy']:
             meta_df[col] = meta_df[f"{col}_u"].combine_first(meta_df[col])
             meta_df.drop(columns=[f"{col}_u"], inplace=True)
-        st.success("✅ アップロードCSVを反映しました / The upload has been applied")
+        st.success("✅ アップロードCSVを反映しました / Your CSV file has been loaded")
     except Exception as e:
         st.error(f"アップロードCSVの読み込み中にエラー: {e}")
 
@@ -143,7 +143,12 @@ fig.autofmt_xdate()
 ax.set_title("My METΔPLΔNET Trading History", color='white')
 ax.set_xlabel("Date", color='white')
 ax.set_ylabel("Value", color='white')
-ax.legend()
+legend = ax.legend()
+for text in legend.get_texts():
+    text.set_color('white')  # ← ここで文字色を指定
+legend.get_frame().set_facecolor('none')  # 背景を透明に
+legend.get_frame().set_edgecolor('white')  # 枠の色を白に（非表示にしたいなら 'none'）
+
 ax.grid(True, color='gray', linestyle='--', alpha=0.3)
 ax.tick_params(colors='white', which='both')
 
