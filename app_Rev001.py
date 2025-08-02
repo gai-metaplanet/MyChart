@@ -8,15 +8,6 @@ import streamlit as st
 import uuid
 from datetime import datetime
 
-# セッションIDをユニークに
-if 'session_id' not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-# アクセス記録（ログファイル）
-with open("access_log.txt", "a") as f:
-    f.write(f"{datetime.now()}, {st.session_state.session_id}\n")
-
-st.write("ようこそ！")
 
 st.title("My METΔPLΔNET Trading History")
 
@@ -95,7 +86,7 @@ edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True
 fixed_marker_size = st.toggle("📏 マーカーサイズを固定する / Fix the marker size", value=False)
 
 csv = edited_df.to_csv(index=False).encode("utf-8")
-st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV", data=csv, file_name="Metaplanet-Trading-data.csv", mime="text/csv")
+st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV", data=csv, file_name="MetaplanetTradingData.csv", mime="text/csv")
 
 # ===== グラフ描画 =====
 edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
