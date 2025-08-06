@@ -24,14 +24,15 @@ def load_default_csv():
 
 # 🔹 株価をyfinanceから取得
 def fetch_stock_history():
-    ticker = yf.Ticker("3350.T")
-    df = ticker.history(period="3m")
-    df.reset_index(inplace=True)
-    df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')
-    return df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
+    try:
+        ticker = yf.Ticker("3350.T")
+        df = ticker.history(period="3m")
+        df.reset_index(inplace=True)
+        df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')
+        return df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
     except Exception as e:
-    st.warning(f"⚠ yfinance からの株価取得に失敗しました: {e}")
-    return pd.DataFrame(columns=['DateLabel', 'EndV'])
+        st.warning(f"⚠ yfinance からの株価取得に失敗しました: {e}")
+        return pd.DataFrame(columns=['DateLabel', 'EndV'])
 
 
 # 🔹 デフォルト読み込み
