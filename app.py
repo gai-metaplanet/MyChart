@@ -132,9 +132,9 @@ def get_marker_size(volume):
     except:
         return 60
 
-    if marker_size_mode == "固定サイズ":
+    if marker_size_mode == "固定サイズ Fix size":
         return 50
-    elif marker_size_mode == "段階サイズ":
+    elif marker_size_mode == "段階サイズ Step size":
         if volume < 1000:
             return 100
         elif volume < 2000:
@@ -143,7 +143,7 @@ def get_marker_size(volume):
             return 180
         else:
             return 220
-    elif marker_size_mode == "比例サイズ":
+    elif marker_size_mode == "比例サイズ Proportional size":
         scale = 0.05  # ← お好みで調整。大きすぎたり小さすぎたりする場合はこの値を調整。
         return max(volume * scale, 10)  # 最小サイズ10で見えるように
 
