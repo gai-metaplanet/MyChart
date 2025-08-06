@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import yfinance as yf
 import os
+import streamlit as st
+import uuid
+from datetime import datetime
 
 st.title("My METΔPLΔNET Trading History")
 
@@ -79,10 +82,16 @@ st.subheader("📋 表データの編集 / Edit Data Table")
 edited_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
 
 # 🔘 マーカーサイズの固定切り替え
-fixed_marker_size = st.toggle("📏 マーカーサイズを固定する / Fix the marker size", value=False)
+# fixed_marker_size = st.toggle("📏 マーカーサイズを固定する / Fix the marker size", value=False)
+# 📌 追加（トグルの代わりにセレクトボックス）
+marker_size_mode = st.selectbox(
+    "マーカーサイズのモードを選択 / Marker Size Mode",
+    ["固定サイズ Fix size", "段階サイズ Step size", "比例サイズ Proportional size"],
+    index=1
+)
 
 csv = edited_df.to_csv(index=False).encode("utf-8")
-st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV", data=csv, file_name="Metaplanet-Trading-data.csv", mime="text/csv")
+st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV", data=csv, file_name="MetaplanetTradingData.csv", mime="text/csv")
 
 # ===== グラフ描画 =====
 edited_df['DateLabel'] = pd.to_datetime(edited_df['DateLabel'])
@@ -102,21 +111,41 @@ filtered_buy = edited_df[edited_df['Buy'] != 0]
 filtered_sell = edited_df[edited_df['Sell'] != 0]
 
 # 🔧 マーカーサイズ関数（トグル対応）
+# def get_marker_size(volume):
+#     if fixed_marker_size:
+#         return 50  # 固定サイズ
+#     try:
+#         volume = float(volume)
+#     except:
+#         return 60
+#     if volume < 1000:
+#         return 100
+#     elif volume < 2000:
+#         return 140
+#     elif volume < 10000:
+#         return 180
+#     else:
+#         return 220
 def get_marker_size(volume):
-    if fixed_marker_size:
-        return 50  # 固定サイズ
     try:
         volume = float(volume)
     except:
         return 60
-    if volume < 1000:
-        return 100
-    elif volume < 2000:
-        return 140
-    elif volume < 10000:
-        return 180
-    else:
-        return 220
+
+    if marker_size_mode == "固定サイズ":
+        return 50
+    elif marker_size_mode == "段階サイズ":
+        if volume < 1000:
+            return 100
+        elif volume < 2000:
+            return 140
+        elif volume < 10000:
+            return 180
+        else:
+            return 220
+    elif marker_size_mode == "比例サイズ":
+        scale = 0.05  # ← お好みで調整。大きすぎたり小さすぎたりする場合はこの値を調整。
+        return max(volume * scale, 10)  # 最小サイズ10で見えるように
 
 
 
