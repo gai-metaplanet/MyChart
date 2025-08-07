@@ -26,7 +26,7 @@ def load_default_csv():
 def fetch_stock_history():
     try:
         ticker = yf.Ticker("3350.T")
-        df = ticker.history(period="3m")
+        df = ticker.history(period="3mo")
         df.reset_index(inplace=True)
         df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')
         return df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
