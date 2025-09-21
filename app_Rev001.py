@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import yfinance as yf
 
+st.set_page_config(layout="wide")
 st.title("My METΔPLΔNET Trading History")
 
 DEFAULT_CSV_PATH = "data/3350 - default.csv"
@@ -35,7 +36,7 @@ def fetch_stock_history():
         return pd.DataFrame(columns=['DateLabel', 'EndV', 'Sell', 'Buy']).astype(str)
 
 # -------------------------
-# 初期ロード
+# 初期ロード（session_state に1度だけ入れる）
 # -------------------------
 if "meta_df" not in st.session_state:
     base_df = load_default_csv()
@@ -43,12 +44,15 @@ if "meta_df" not in st.session_state:
     existing_dates = set(base_df['DateLabel'])
     new_dates_df = stock_df[~stock_df['DateLabel'].isin(existing_dates)].copy()
     combined_df = pd.concat([base_df, new_dates_df], ignore_index=True)
-    st.session_state.meta_df = combined_df.fillna("").astype(str)
+    combined_df = combined_df[['DateLabel', 'EndV', 'Sell', 'Buy']].fillna("").astype(str)
+    st.session_state.meta_df = combined_df
 
-meta_df = st.session_state.meta_df.copy()
+# 編集用バッファ（編集中の内容はここだけ触る）
+if "editable_meta_df" not in st.session_state:
+    st.session_state.editable_meta_df = st.session_state.meta_df.copy()
 
 # -------------------------
-# CSVアップロード
+# CSVアップロード（アップロード時は saved と buffer を同期）
 # -------------------------
 uploaded_file = st.file_uploader("📂 Upload CSV File（Optional）", type="csv")
 if uploaded_file:
@@ -59,63 +63,53 @@ if uploaded_file:
             if c not in up.columns:
                 up[c] = ""
         up = up[['DateLabel', 'EndV', 'Sell', 'Buy']].fillna("").astype(str)
-        meta_df['DateLabel'] = meta_df['DateLabel'].astype(str)
-        up['DateLabel'] = up['DateLabel'].astype(str)
-        merged = pd.merge(meta_df, up, on='DateLabel', how='outer', suffixes=('', '_u'))
+
+        # merge into saved meta_df
+        merged = pd.merge(st.session_state.meta_df, up, on='DateLabel', how='outer', suffixes=('', '_u'))
         for c in ['EndV', 'Sell', 'Buy']:
             merged[c] = merged[f"{c}_u"].combine_first(merged[c])
             merged.drop(columns=[f"{c}_u"], inplace=True)
         merged = merged[['DateLabel', 'EndV', 'Sell', 'Buy']].fillna("").astype(str)
+
         st.session_state.meta_df = merged
-        meta_df = merged.copy()
-        st.success("✅ CSVを反映しました")
+        st.session_state.editable_meta_df = merged.copy()  # 編集バッファも同期
+        st.success("✅ CSVを反映しました（保存済みデータにマージし、編集バッファも更新）")
     except Exception as e:
         st.error(f"CSV読み込み中にエラー: {e}")
 
 # -------------------------
-# 表データ編集
+# 表データ編集（編集はバッファで行い、明示的に保存）
 # -------------------------
-# --- 見出しはここで出す ---
-st.subheader("📋 Edit Data Table")
+st.subheader("📋 Edit Data Table (編集は下のボタンで保存してください)")
 
-# --- DataFrameを文字列化して安全にする ---
-df_for_editor = st.session_state.meta_df.fillna("").astype(str)
-
-# --- st.data_editor に渡すのは DataFrame だけ ---
+# st.data_editor の key は 'editable_meta_df' に固定（バッファと紐づけ）
 edited_df = st.data_editor(
-    df_for_editor,
-    key="editable_meta_df",       # ←必ずユニークなkey
+    st.session_state.editable_meta_df,
+    key="editable_meta_df",
     num_rows="dynamic",
     use_container_width=True
 )
 
-# --- 編集結果をsession_stateに戻す ---
-st.session_state.meta_df = edited_df.copy()
-tmp_df = edited_df.copy()
+# 保存 / 元に戻す ボタン
+col1, col2, _ = st.columns([1,1,8])
+if col1.button("💾 Save changes"):
+    # Save: バッファ → meta_df（グラフ等は保存済みデータを参照）
+    st.session_state.meta_df = st.session_state.editable_meta_df.copy()
+    st.success("編集内容を保存しました（グラフ等に反映されます）")
 
+if col2.button("↩️ Revert to last saved"):
+    # Revert: meta_df → バッファ（編集内容を破棄）
+    st.session_state.editable_meta_df = st.session_state.meta_df.copy()
+    st.experimental_rerun()
 
-
-# -------------------------
-# UIコントロール
-# -------------------------
-marker_size_mode = st.selectbox(
-    "マーカーサイズのモード / Marker Size Mode",
-    ["固定サイズ Fix size", "段階サイズ Step size", "比例サイズ Proportional size"],
-    index=1
-)
-
-chart_title = st.text_input("グラフタイトル / Chart Title",
-                            value="My METΔPLΔNET Trading History")
+# CSV エクスポート（保存済みデータをエクスポート）
+csv_bytes = st.session_state.meta_df.to_csv(index=False).encode("utf-8")
+st.download_button("💾 Export CSV (saved data)", data=csv_bytes, file_name="MetaplanetTradingData.csv", mime="text/csv")
 
 # -------------------------
-# CSVダウンロード
+# グラフ描画用に安全に数値変換（保存済みデータを表示）
 # -------------------------
-csv_bytes = tmp_df.to_csv(index=False).encode("utf-8")
-st.download_button("💾 Export CSV", data=csv_bytes, file_name="MetaplanetTradingData.csv", mime="text/csv")
-
-# -------------------------
-# グラフ描画用に安全に数値変換
-# -------------------------
+tmp_df = st.session_state.meta_df.copy()
 plot_df = tmp_df.copy()
 plot_df['DateLabel_dt'] = pd.to_datetime(plot_df['DateLabel'], errors='coerce')
 
@@ -129,6 +123,15 @@ st.metric(label="💰 EndV × Buy 合計", value=f"{total_value_buy:,.0f}")
 
 filtered_buy = plot_df[buy != 0]
 filtered_sell = plot_df[sell != 0]
+
+marker_size_mode = st.selectbox(
+    "マーカーサイズのモード / Marker Size Mode",
+    ["固定サイズ Fix size", "段階サイズ Step size", "比例サイズ Proportional size"],
+    index=1
+)
+
+chart_title = st.text_input("グラフタイトル / Chart Title",
+                            value="My METΔPLΔNET Trading History")
 
 def get_marker_size(volume):
     try:
