@@ -8,145 +8,176 @@ st.title("My METΔPLΔNET Trading History")
 
 DEFAULT_CSV_PATH = "data/3350 - default.csv"
 
-# ===============================
-# デフォルトCSV読み込み関数
-# ===============================
+# -------------------------
+# helpers
+# -------------------------
 def load_default_csv():
     try:
         df = pd.read_csv(DEFAULT_CSV_PATH)
         df.rename(columns={'Date': 'DateLabel', 'End Value': 'EndV'}, inplace=True)
-    except:
+    except Exception:
+        # 必要な列が最低限ある空DFを返す
         df = pd.DataFrame(columns=['DateLabel', 'EndV', 'Sell', 'Buy'])
+    # 内部は文字列で保持（編集しやすくするため）
+    for c in ['DateLabel', 'EndV', 'Sell', 'Buy']:
+        if c not in df.columns:
+            df[c] = ""
+    df = df[['DateLabel', 'EndV', 'Sell', 'Buy']]
+    df = df.astype(str)
     return df
 
-# ===============================
-# 株価をyfinanceから取得
-# ===============================
 def fetch_stock_history():
     try:
         ticker = yf.Ticker("3350.T")
         df = ticker.history(period="3mo")
         df.reset_index(inplace=True)
-        df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')  # ←文字列にする
-        return df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
-    except:
-        return pd.DataFrame(columns=['DateLabel', 'EndV'])
+        df['DateLabel'] = df['Date'].dt.strftime('%Y-%m-%d')  # 文字列で返す
+        df = df[['DateLabel', 'Close']].rename(columns={'Close': 'EndV'})
+        # Ensure columns exist and are strings
+        df['Sell'] = ""
+        df['Buy'] = ""
+        return df.astype(str)
+    except Exception:
+        return pd.DataFrame(columns=['DateLabel', 'EndV', 'Sell', 'Buy']).astype(str)
 
-# ===============================
+# -------------------------
 # 初期ロード（session_stateで保持）
-# ===============================
+# -------------------------
 if "meta_df" not in st.session_state:
-    default_df = load_default_csv()
+    base_df = load_default_csv()
     stock_df = fetch_stock_history()
 
-    existing_dates = set(default_df['DateLabel'])
+    # defaultに存在しない日付を補完
+    existing_dates = set(base_df['DateLabel'])
     new_dates_df = stock_df[~stock_df['DateLabel'].isin(existing_dates)].copy()
-    new_dates_df['Sell'] = 0
-    new_dates_df['Buy'] = 0
 
-    combined_df = pd.concat([default_df, new_dates_df], ignore_index=True)
-    combined_df = combined_df[['DateLabel', 'EndV', 'Sell', 'Buy']]
-    combined_df['Sell'] = pd.to_numeric(combined_df['Sell'], errors='coerce').fillna(0)
-    combined_df['Buy'] = pd.to_numeric(combined_df['Buy'], errors='coerce').fillna(0)
+    combined = pd.concat([base_df, new_dates_df], ignore_index=True)
+    combined = combined[['DateLabel', 'EndV', 'Sell', 'Buy']]
+    # すべて文字列で保持（編集を優先）
+    combined = combined.fillna("").astype(str)
 
-    # 🔹内部は文字列として保持
-    combined_df['DateLabel'] = combined_df['DateLabel'].astype(str)
+    st.session_state.meta_df = combined
 
-    st.session_state.meta_df = combined_df.copy()
-
-# ここから先は session_state を使う
+# 作業用コピー
 meta_df = st.session_state.meta_df.copy()
 
-# ===============================
-# CSVアップロード対応（任意）
-# ===============================
+# -------------------------
+# CSVアップロード（文字列で統一してマージ）
+# -------------------------
 uploaded_file = st.file_uploader("📂 Upload CSV File（任意 / Optional）", type="csv")
 if uploaded_file:
     try:
-        uploaded_df = pd.read_csv(uploaded_file)
-        uploaded_df.rename(columns={'Date': 'DateLabel', 'End Value': 'EndV'}, inplace=True)
-        uploaded_df = uploaded_df[['DateLabel', 'EndV', 'Sell', 'Buy']]
-        uploaded_df['Sell'] = pd.to_numeric(uploaded_df['Sell'], errors='coerce').fillna(0)
-        uploaded_df['Buy'] = pd.to_numeric(uploaded_df['Buy'], errors='coerce').fillna(0)
+        up = pd.read_csv(uploaded_file)
+        up.rename(columns={'Date': 'DateLabel', 'End Value': 'EndV'}, inplace=True)
+        # 必要列を確保し、文字列化
+        for c in ['DateLabel', 'EndV', 'Sell', 'Buy']:
+            if c not in up.columns:
+                up[c] = ""
+        up = up[['DateLabel', 'EndV', 'Sell', 'Buy']].fillna("").astype(str)
 
-        # 🔹内部は文字列に統一
-        uploaded_df['DateLabel'] = uploaded_df['DateLabel'].astype(str)
+        # 両方を文字列で統一してから merge
         meta_df['DateLabel'] = meta_df['DateLabel'].astype(str)
+        up['DateLabel'] = up['DateLabel'].astype(str)
 
-        merged_df = pd.merge(meta_df, uploaded_df, on='DateLabel', how='outer', suffixes=('', '_u'))
+        merged = pd.merge(meta_df, up, on='DateLabel', how='outer', suffixes=('', '_u'))
+
+        # アップロード側の値があれば優先（ただしすべて文字列）
         for c in ['EndV', 'Sell', 'Buy']:
-            merged_df[c] = merged_df[f"{c}_u"].combine_first(merged_df[c])
-            if f"{c}_u" in merged_df:
-                merged_df.drop(columns=f"{c}_u", inplace=True)
+            if f"{c}_u" in merged.columns:
+                merged[c] = merged[f"{c}_u"].combine_first(merged[c])
+                merged.drop(columns=[f"{c}_u"], inplace=True)
+        # 欠損を空文字で埋めて文字列に
+        merged = merged[['DateLabel', 'EndV', 'Sell', 'Buy']].fillna("").astype(str)
 
-        st.session_state.meta_df = merged_df
-        meta_df = merged_df.copy()
+        st.session_state.meta_df = merged
+        meta_df = merged.copy()
         st.success("✅ アップロードCSVを反映しました")
     except Exception as e:
         st.error(f"アップロードCSVの読み込み中にエラー: {e}")
 
-# ===============================
-# 表データ編集
-# ===============================
-st.subheader("📋 表データの編集 / Edit Data Table")
-tmp_df = st.data_editor(meta_df, num_rows="dynamic", use_container_width=True)
+# -------------------------
+# 表データ編集（内部は文字列で渡す）
+# -------------------------
+st.subheader("📋 表データの編集 / Edit Data Table (編集はテキスト形式で行ってください)")
+# 編集可能にするためにすべて文字列化してから渡す
+editable_df = meta_df.copy().astype(str)
+edited_df = st.data_editor(editable_df, num_rows="dynamic", use_container_width=True)
+# 編集結果を session_state に反映（文字列のまま）
+st.session_state.meta_df = edited_df.copy()
+tmp_df = edited_df.copy()
 
-# 編集結果をsession_stateに反映
-st.session_state.meta_df = tmp_df.copy()
-
-# ===============================
-# マーカーサイズモード
-# ===============================
+# -------------------------
+# UIコントロール
+# -------------------------
 marker_size_mode = st.selectbox(
     "マーカーサイズのモードを選択 / Marker Size Mode",
     ["固定サイズ Fix size", "段階サイズ Step size", "比例サイズ Proportional size"],
     index=1
 )
 
-# ===============================
+chart_title = st.text_input("グラフタイトルを入力 / Enter chart title",
+                            value="My METΔPLΔNET Trading History")
+
 # ダウンロードボタン
-# ===============================
-csv = tmp_df.to_csv(index=False).encode("utf-8")
+csv_bytes = tmp_df.to_csv(index=False).encode("utf-8")
 st.download_button("💾 編集後CSVをダウンロード / Export the updated CSV",
-                   data=csv, file_name="MetaplanetTradingData.csv", mime="text/csv")
+                   data=csv_bytes, file_name="MetaplanetTradingData.csv", mime="text/csv")
 
-# ===============================
-# タイトル入力欄を追加
-# ===============================
-chart_title = st.text_input(
-    "グラフタイトルを入力 / Enter chart title",
-    value="My METΔPLΔNET Trading History"  # ←初期値
-)
-
-# EndV × Buy の合計値を計算
-plot_df['Value_Buy'] = pd.to_numeric(plot_df['EndV'], errors='coerce').fillna(0) * \
-                       pd.to_numeric(plot_df['Buy'], errors='coerce').fillna(0)
-
-total_value_buy = plot_df['Value_Buy'].sum()
-
-# ページに表示
-st.metric(label="💰 EndV × Buy 合計", value=f"{total_value_buy:,.0f}")
-
-# ===============================
-# グラフ描画
-# ===============================
+# -------------------------
+# グラフ描画前：安全に数値化して計算
+# -------------------------
 plot_df = tmp_df.copy()
 
-# グラフ描画の直前だけdatetimeに変換
-plot_df['DateLabel'] = pd.to_datetime(plot_df['DateLabel'], errors='coerce')
-plot_df['Sell'] = pd.to_numeric(plot_df['Sell'], errors='coerce').fillna(0)
-plot_df['Buy'] = pd.to_numeric(plot_df['Buy'], errors='coerce').fillna(0)
+# DateLabel を datetime に変換（描画用）
+plot_df['DateLabel_dt'] = pd.to_datetime(plot_df['DateLabel'], errors='coerce')
 
+# EndV と Buy が無ければ列を作る（編集で消された場合に備える）
+if 'EndV' not in plot_df.columns:
+    plot_df['EndV'] = ""
+if 'Buy' not in plot_df.columns:
+    plot_df['Buy'] = ""
 
-filtered_buy = plot_df[plot_df['Buy'] != 0]
-filtered_sell = plot_df[plot_df['Sell'] != 0]
+# 数値化（問題がある値は NaN → 0 に）
+try:
+    ev = pd.to_numeric(plot_df['EndV'], errors='coerce').fillna(0)
+except Exception as e:
+    st.error(f"EndV の数値変換でエラー: {e}")
+    ev = pd.Series(0, index=plot_df.index)
+
+try:
+    buy = pd.to_numeric(plot_df['Buy'], errors='coerce').fillna(0)
+except Exception as e:
+    st.error(f"Buy の数値変換でエラー: {e}")
+    buy = pd.Series(0, index=plot_df.index)
+
+# 明示的に掛け算（ここで安全に計算できる）
+try:
+    plot_df['Value_Buy'] = ev * buy
+except Exception as e:
+    st.error(f"EndV×Buy の計算でエラー: {e}")
+    plot_df['Value_Buy'] = 0
+
+total_value_buy = float(plot_df['Value_Buy'].sum())
+
+# 表示（metric）
+st.metric(label="💰 EndV × Buy 合計", value=f"{total_value_buy:,.0f}")
+
+# -------------------------
+# プロット用に必要な列を plot_df に戻す
+# -------------------------
+# グラフには datetime 列と数値 EndV を使う
+plot_df['EndV_num'] = ev
+plot_df['Sell_num'] = pd.to_numeric(plot_df.get('Sell', 0), errors='coerce').fillna(0)
+plot_df['Buy_num'] = buy
+
+filtered_buy = plot_df[plot_df['Buy_num'] != 0]
+filtered_sell = plot_df[plot_df['Sell_num'] != 0]
 
 def get_marker_size(volume):
     try:
         volume = float(volume)
     except:
         return 60
-
     if marker_size_mode == "固定サイズ Fix size":
         return 50
     elif marker_size_mode == "段階サイズ Step size":
@@ -158,34 +189,39 @@ def get_marker_size(volume):
             return 180
         else:
             return 220
-    elif marker_size_mode == "比例サイズ Proportional size":
+    else:  # 比例
         scale = 0.02
         return max(volume * scale, 20)
 
+# -------------------------
+# プロット
+# -------------------------
 fig, ax = plt.subplots(figsize=(12, 6))
 fig.patch.set_facecolor('black')
 ax.set_facecolor('black')
 
-ax.plot(plot_df['DateLabel'], plot_df['EndV'], label='End Value', color='orange', alpha=0.6)
+ax.plot(plot_df['DateLabel_dt'], plot_df['EndV_num'], label='End Value', color='orange', alpha=0.6)
 
+# buy markers
 for i in range(len(filtered_buy)):
-    ax.scatter(filtered_buy['DateLabel'].iloc[i], filtered_buy['EndV'].iloc[i],
-               s=get_marker_size(filtered_buy['Buy'].iloc[i]), color='lightgreen',
-               marker='^', alpha=0.8, label='Buy' if i == 0 else "")
+    ax.scatter(filtered_buy['DateLabel_dt'].iloc[i], filtered_buy['EndV_num'].iloc[i],
+               s=get_marker_size(filtered_buy['Buy_num'].iloc[i]), marker='^', alpha=0.8,
+               label='Buy' if i == 0 else "")
 
+# sell markers
 for i in range(len(filtered_sell)):
-    ax.scatter(filtered_sell['DateLabel'].iloc[i], filtered_sell['EndV'].iloc[i],
-               s=get_marker_size(filtered_sell['Sell'].iloc[i]), color='red',
-               marker='v', alpha=0.8, label='Sell' if i == 0 else "")
+    ax.scatter(filtered_sell['DateLabel_dt'].iloc[i], filtered_sell['EndV_num'].iloc[i],
+               s=get_marker_size(filtered_sell['Sell_num'].iloc[i]), marker='v', alpha=0.8,
+               label='Sell' if i == 0 else "")
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 fig.autofmt_xdate()
 
-# ax.set_title("My METΔPLΔNET Trading History", color='white')
 ax.set_title(chart_title, color='white')
 ax.set_xlabel("Date", color='white')
 ax.set_ylabel("Value", color='white')
+
 legend = ax.legend()
 for text in legend.get_texts():
     text.set_color('white')
