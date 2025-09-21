@@ -128,6 +128,17 @@ plot_df['DateLabel'] = pd.to_datetime(plot_df['DateLabel'], errors='coerce')
 plot_df['Sell'] = pd.to_numeric(plot_df['Sell'], errors='coerce').fillna(0)
 plot_df['Buy'] = pd.to_numeric(plot_df['Buy'], errors='coerce').fillna(0)
 
+
+# EndV × Buy の合計値を計算
+plot_df['Value_Buy'] = pd.to_numeric(plot_df['EndV'], errors='coerce').fillna(0) * \
+                       pd.to_numeric(plot_df['Buy'], errors='coerce').fillna(0)
+
+total_value_buy = plot_df['Value_Buy'].sum()
+
+# ページに表示
+st.metric(label="💰 EndV × Buy 合計", value=f"{total_value_buy:,.0f}")
+
+
 filtered_buy = plot_df[plot_df['Buy'] != 0]
 filtered_sell = plot_df[plot_df['Sell'] != 0]
 
