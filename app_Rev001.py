@@ -76,10 +76,20 @@ if uploaded_file:
 # 表データ編集
 # -------------------------
 st.subheader("📋 Edit Data Table")
-editable_df = meta_df.fillna("").astype(str)  # 文字列固定
-edited_df = st.data_editor(editable_df, num_rows="dynamic", use_container_width=True)
+
+# st.data_editor に key をつけてセッション状態に直接紐付け
+edited_df = st.data_editor(
+    "編集可能なテーブル",
+    st.session_state.meta_df,
+    key="editable_meta_df",
+    num_rows="dynamic",
+    use_container_width=True
+)
+
+# 編集された結果をセッション状態に反映
 st.session_state.meta_df = edited_df.copy()
 tmp_df = edited_df.copy()
+
 
 # -------------------------
 # UIコントロール
