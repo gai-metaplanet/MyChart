@@ -75,20 +75,24 @@ if uploaded_file:
 # -------------------------
 # 表データ編集
 # -------------------------
+# --- 見出しはここで出す ---
 st.subheader("📋 Edit Data Table")
 
-# st.data_editor に key をつけてセッション状態に直接紐付け
+# --- DataFrameを文字列化して安全にする ---
+df_for_editor = st.session_state.meta_df.fillna("").astype(str)
+
+# --- st.data_editor に渡すのは DataFrame だけ ---
 edited_df = st.data_editor(
-    "編集可能なテーブル",
-    st.session_state.meta_df,
-    key="editable_meta_df",
+    df_for_editor,
+    key="editable_meta_df",       # ←必ずユニークなkey
     num_rows="dynamic",
     use_container_width=True
 )
 
-# 編集された結果をセッション状態に反映
+# --- 編集結果をsession_stateに戻す ---
 st.session_state.meta_df = edited_df.copy()
 tmp_df = edited_df.copy()
+
 
 
 # -------------------------
