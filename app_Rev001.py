@@ -111,6 +111,14 @@ st.download_button("💾 編集後CSVをダウンロード / Export the updated 
                    data=csv, file_name="MetaplanetTradingData.csv", mime="text/csv")
 
 # ===============================
+# タイトル入力欄を追加
+# ===============================
+chart_title = st.text_input(
+    "グラフタイトルを入力 / Enter chart title",
+    value="My METΔPLΔNET Trading History"  # ←初期値
+)
+
+# ===============================
 # グラフ描画
 # ===============================
 plot_df = tmp_df.copy()
@@ -164,7 +172,8 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 fig.autofmt_xdate()
 
-ax.set_title("My METΔPLΔNET Trading History", color='white')
+# ax.set_title("My METΔPLΔNET Trading History", color='white')
+ax.set_title(chart_title, color='white')
 ax.set_xlabel("Date", color='white')
 ax.set_ylabel("Value", color='white')
 legend = ax.legend()
